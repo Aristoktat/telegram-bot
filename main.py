@@ -1,81 +1,91 @@
-import asyncio
-import logging
 import os
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.filters import Command
-from aiogram.types import Message
-from aiohttp import web
+import sqlite3
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# SOZLAMALAR
-# Renderda portni os.environ orqali olish kerak
-PORT = int(os.environ.get("PORT", 8080))
-API_TOKEN = '6092087398:AAGZw3TVrL3-lhDMrGgTGzSquW1_kj3AaqY'
+# SIZNING YAKUNIY MA'LUMOTLARINGIZ
+API_TOKEN = '7607759837:AAExI6W2Y66r1m7N6K691B6Yk6fO0wYqW6A'
+ADMIN_ID = 689757167  # Sizning ID raqamingiz muvaffaqiyatli kiritildi
+CHANNELS = ['@Islomiy_kinolar_20']
 
-logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
+dp = Dispatcher(bot)
 
-# --- WEB SERVER (Render aktiv turishi uchun) ---
-async def handle(request):
-    return web.Response(text="Bot ishlayapti!")
+# Ma'lumotlar bazasini sozlash (SQLite)
+conn = sqlite3.connect('bot_database.db', check_same_thread=False)
+cursor = conn.cursor()
+cursor.execute('CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY)')
+cursor.execute('CREATE TABLE IF NOT EXISTS movies (code TEXT PRIMARY KEY, file_id TEXT)')
+conn.commit()
 
-async def start_web_server():
-    app = web.Application()
-    app.router.add_get("/", handle)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", PORT)
-    await site.start()
-    print(f"Web server {PORT}-portda ishga tushdi.")
+# Obunani tekshirish funksiyasi
+async def check_sub(user_id):
+    try:
+        for channel in CHANNELS:
+            status = await bot.get_chat_member(chat_id=channel, user_id=user_id)
+            if status.status == 'left':
+                return False
+        return True
+    except Exception:
+        # Agar bot kanalga admin bo'lmasa, tekshirish o'chib turadi (xato bermaslik uchun)
+        return True
 
-# --- KINO BAZASI ---
-movies = {
-    "1": "BAACAgIAAxkBAAIBy2lw4h8DfXD-5UrdgtEO8j5F9OTuAAKWiAACj_8JSwKIXfSeA1E8OAQ",
-    "2": "BAACAgIAAxkBAAIBzmlw4kKR5fEH7M4brlj8--RpKajuAAKYiAACj_8JS8ahu1EXIkl1OAQ",
-    "3": "BAACAgIAAxkBAAIB0mlw4kJx8OYGBP_kEsRlJfUP9hwqAAKciAACj_8JSzSD672LXumiOAQ",
-    "4": "BAACAgIAAxkBAAIB1Glw4kKQA9WwpZZMWnBk058SqhvUAAKfiAACj_8JS_iqB_wg5t5EOAQ",
-    "5": "BAACAgIAAxkBAAIB02lw4kJeX6pNm4OXY-s3I6GrKQABkQACnYgAAo__CUuyIqjpufIMKzgE",
-    "6": "BAACAgIAAxkBAAIB1Wlw4kIOygnLF0_IzjAMo7a-S5yQAAKgiAACj_8JS7Pmo5ozRqFnOAQ",
-    "7": "BAACAgIAAxkBAAIB1mlw4kI-lu9WO3kJch3cOC9s4HDFAAKkiAACj_8JS9FwUK3ECugYOAQ",
-    "8": "BAACAgIAAxkBAAIBz2lw4kJQDIQCvXcGHxVoQScX7Mi6AAKZiAACj_8JSzJK6a5N-s9kOAQ",
-    "9": "BAACAgIAAxkBAAIB0Glw4kIosKbGjlKMy5LkPuBKeKfsAAKaiAACj_8JS68Nd1Gb7iWTOAQ",
-    "10": "BAACAgIAAxkBAAIB0Wlw4kJ15KHr6BIDKlNQVwvMN6xaAAKbiAACj_8JS42_Vhb7VoaXOAQ",
-}
-
-@dp.message(Command("start"))
-async def start_command(message: Message):
-    await message.answer(
-        "🎬 **Kino Botga xush kelibsiz!**\n\n"
-        "Bot Render serverida ishga tushirildi. Kino kodini yuboring."
-    )
-
-@dp.message(F.text)
-async def send_movie(message: Message):
-    user_code = message.text
-    if user_code in movies:
-        try:
-            await message.answer_video(
-                video=movies[user_code], 
-                caption=f"✅ So'ralgan kino (Kod: {user_code})"
-            )
-        except Exception as e:
-            await message.answer(f"❌ Xatolik: {e}")
-    else:
-        await message.answer("❌ Bunday kodli kino topilmadi.")
-
-async def main():
-    # Web serverni alohida boshlash
-    await start_web_server()
+@dp.message_handler(commands=['start'])
+async def start(message: types.Message):
+    # Foydalanuvchini bazaga qo'shish
+    try:
+        cursor.execute('INSERT INTO users VALUES (?)', (message.from_id,))
+        conn.commit()
+    except:
+        pass
     
-    # Bot pollingni boshlash
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    if await check_sub(message.from_id):
+        await message.answer("✅ **Xush kelibsiz!**\n\nKino kodini raqamlar bilan yuboring.")
+    else:
+        markup = InlineKeyboardMarkup()
+        for ch in CHANNELS:
+            markup.add(InlineKeyboardButton(text="Kanalga a'zo bo'lish", url=f"https://t.me/{ch[1:]}"))
+        markup.add(InlineKeyboardButton(text="Tekshirish ✅", callback_data="check_subscription"))
+        await message.answer(f"Botdan foydalanish uchun {CHANNELS[0]} kanaliga a'zo bo'ling:", reply_markup=markup)
+
+@dp.callback_query_handler(text="check_subscription")
+async def check_callback(call: types.CallbackQuery):
+    if await check_sub(call.from_user.id):
+        await call.message.delete()
+        await call.message.answer("✅ Rahmat! Endi kino kodini yuborishingiz mumkin.")
+    else:
+        await call.answer("❌ Siz hali kanalga a'zo bo'lmagansiz!", show_alert=True)
+
+@dp.message_handler(commands=['stat'])
+async def statistika(message: types.Message):
+    if message.from_id == ADMIN_ID:
+        cursor.execute('SELECT COUNT(*) FROM users')
+        count = cursor.fetchone()[0]
+        await message.answer(f"📊 **Bot statistikasi:**\n\nA'zolar soni: {count} ta")
+
+@dp.message_handler(content_types=['video'])
+async def add_movie(message: types.Message):
+    if message.from_id == ADMIN_ID:
+        movie_code = message.caption
+        if movie_code:
+            cursor.execute('INSERT OR REPLACE INTO movies VALUES (?, ?)', (movie_code, message.video.file_id))
+            conn.commit()
+            await message.answer(f"🎬 **Kino saqlandi!**\n\nKod: `{movie_code}`\n\nEndi foydalanuvchilar shu kodni yozsa, bot videoni yuboradi.")
+        else:
+            await message.answer("⚠️ **Xato!**\n\nVideoni yuborayotganda 'Izoh' (caption) qismiga kino kodini yozib yuboring.")
+
+@dp.message_handler()
+async def search_movie(message: types.Message):
+    if not await check_sub(message.from_id):
+        return await start(message)
+        
+    code = message.text
+    cursor.execute('SELECT file_id FROM movies WHERE code=?', (code,))
+    result = cursor.fetchone()
+    if result:
+        await bot.send_video(message.from_id, result[0], caption=f"🎥 **Kino topildi!**\nKod: {code}\n\n@Islomiy_kinolar_20")
+    else:
+        await message.answer("😔 **Kechirasiz, bunday kodli kino topilmadi.**\n\nKodni to'g'ri yozganingizni tekshiring.")
 
 if __name__ == '__main__':
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("Bot to'xtatildi.")
-
-
-
+    executor.start_polling(dp, skip_updates=True)
