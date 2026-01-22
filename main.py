@@ -8,7 +8,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
 
 # ===== SOZLAMALAR =====
-API_TOKEN = "6252362558:AAFzmD_nSmcj12XvPtCA-aeaBruQl3WTakI"
+API_TOKEN = "8261009487:AAF9m4bjJj9IBIoTeLGWMs2qOVqOVT2Padc"
 ADMINS = [689757167, 6252362558]
 
 bot = Bot(token=API_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
@@ -104,3 +104,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
