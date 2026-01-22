@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 # .env faylidan sozlamalarni yuklash
 load_dotenv()
 # ===== SOZLAMALAR =====
-API_TOKEN = os.getenv("BOT_TOKEN", "6252362558:AAFzmD_nSmcj12XvPtCA-aeaBruQl3WTakI")
+API_TOKEN = os.getenv("BOT_TOKEN", "6092087398:AAGZw3TVrL3-lhDMrGgTGzSquW1_kj3AaqY")
 # Admin ID'larini ro'yxatga kiriting
 ADMINS = [689757167, 6252362558] # Ikkinchi ID'ni ham qo'shib qo'ydim
 # Majburiy obuna kanallari ID'si
@@ -182,3 +182,4 @@ async def main_loop():
     await dp.start_polling(bot)
 if __name__ == "__main__":
     asyncio.run(main_loop())
+
