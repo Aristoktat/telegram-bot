@@ -8,7 +8,7 @@ from aiogram.types import (
 from aiogram.client.default import DefaultBotProperties
 
 # ===== CONFIG =====
-BOT_TOKEN = "8261009487:AAF9m4bjJj9IBIoTeLGWMs2qOVqOVT2Padc"  # Sizning token
+BOT_TOKEN = "8261009487:AAEtxUClb4p0uFiMZNiynYuhZqH_CUNlj0o"  # Sizning token
 ADMINS = [689757167, 8318430634]           # 2 ta admin
 CHANNEL_ID = -1003537169311                # Kino kanali IDsi
 
@@ -150,6 +150,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
